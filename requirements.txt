@@ -1,0 +1,6 @@
+numpy>=1.24,<2.0
+tqdm>=4.66
+gymnasium[atari]>=0.29
+ale-py>=0.8.1
+stable-baselines3>=2.3.0
+opencv-python>=4.8
