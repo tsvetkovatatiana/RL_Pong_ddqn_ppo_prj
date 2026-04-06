@@ -1,4 +1,5 @@
 import gymnasium as gym
+import ale_py
 from gymnasium.wrappers import FrameStackObservation
 from stable_baselines3.common.atari_wrappers import AtariWrapper
 

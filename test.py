@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from dqn import DQN
-from environment import make_env
+from eniroment import make_env
 
 
 def test(game, model, num_eps=2):
