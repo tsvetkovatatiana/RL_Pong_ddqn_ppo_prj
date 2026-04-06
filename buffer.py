@@ -4,18 +4,13 @@ from tqdm import tqdm
 from environment import make_env
 
 
-device = "cuda" if torch.cuda.is_available() else (
-    "mps" if torch.backends.mps.is_available() else "cpu"
-)
-print("using device", device)
-
 class ReplayBuffer:
-    def __init__(self, capacity, devc):
+    def __init__(self, capacity, device):
         self.capacity = capacity
         self._buffer = np.zeros(capacity, dtype=object)
         self._position = 0
         self._size = 0
-        self.device = devc
+        self.device = device
 
     def store(self, experience):
         idx = self._position % self.capacity
@@ -28,41 +23,49 @@ class ReplayBuffer:
         batch = self._buffer[indices]
 
         return (
-            self.transform(batch, 0, dtype=torch.float32),
-            self.transform(batch, 1, dtype=torch.int64),
-            self.transform(batch, 2, dtype=torch.float32),
-            self.transform(batch, 3, dtype=torch.float32),
-            self.transform(batch, 4, dtype=torch.bool),
+            self.transform(batch, 0, dtype=torch.float32),  # obs
+            self.transform(batch, 1, dtype=torch.int64),    # actions
+            self.transform(batch, 2, dtype=torch.float32),  # rewards
+            self.transform(batch, 3, dtype=torch.float32),  # next_obs
+            self.transform(batch, 4, dtype=torch.bool),     # dones
         )
-
 
     def transform(self, batch, index, dtype):
         values = np.array([val[index] for val in batch])
+
+        # Just in case an extra singleton channel appears
         if values.ndim == 5 and values.shape[-1] == 1:
             values = np.squeeze(values, axis=-1)
 
         return torch.as_tensor(values, dtype=dtype, device=self.device)
 
-
     def __len__(self):
         return self._size
 
 
-def load_buffer(preload, capacity, game, *, devc=device):
+def load_buffer(preload, capacity, game, device):
     env = make_env(game)
-    buffer = ReplayBuffer(capacity, devc)
+    buffer = ReplayBuffer(capacity, device)
 
     obs, _ = env.reset()
 
-    for _ in tqdm(range(preload)):
+    if obs.ndim == 4 and obs.shape[-1] == 1:
+        obs = np.squeeze(obs, axis=-1)
+
+    for _ in tqdm(range(preload), desc="Preloading replay buffer"):
         action = env.action_space.sample()
-        next_state, reward, terminated, truncated, _ = env.step(action)
+        next_obs, reward, terminated, truncated, _ = env.step(action)
         done = terminated or truncated
 
-        buffer.store((obs, action, reward, next_state, done))
-        obs = next_state
+        if next_obs.ndim == 4 and next_obs.shape[-1] == 1:
+            next_obs = np.squeeze(next_obs, axis=-1)
+
+        buffer.store((obs, action, reward, next_obs, done))
+        obs = next_obs
 
         if done:
             obs, _ = env.reset()
+            if obs.ndim == 4 and obs.shape[-1] == 1:
+                obs = np.squeeze(obs, axis=-1)
 
     return buffer, env
