@@ -1,6 +1,6 @@
 # Atari Pong RL (DDQN + PPO)
 
-University project comparing two reinforcement learning approaches on `ALE/Pong-v5`:
+Project comparing two reinforcement learning approaches on `ALE/Pong-v5`:
 
 - PPO (`stable-baselines3`)
 - DDQN (custom PyTorch implementation)
